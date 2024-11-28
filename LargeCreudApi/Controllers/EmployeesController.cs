@@ -1,9 +1,12 @@
-﻿using LargeCreudApi.Data;
+﻿using FluentValidation;
+using LargeCreudApi.Data;
 using LargeCreudApi.DTOs.Employee;
 using LargeCreudApi.Model;
 using Mapster;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.EntityFrameworkCore;
 
 namespace LargeCreudApi.Controllers
 {
@@ -19,17 +22,17 @@ namespace LargeCreudApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        public IActionResult Get()
+        public async Task<IActionResult> GetAsync()
         {
-            var Employees=context.Employees.ToList();
+            var Employees = await context.Employees.ToListAsync();
             var empDto=Employees.Adapt<IEnumerable<GetEmployeeDto>>();
             return Ok(empDto);
         }
 
         [HttpGet("Detalis")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetByIdAsync(int id)
         {
-            var Employee = context.Employees.Find(id);
+            var Employee =await context.Employees.FindAsync(id);
             if(Employee == null)
             {
                 return NotFound("Employee Not Found");
@@ -39,38 +42,51 @@ namespace LargeCreudApi.Controllers
         }
 
         [HttpPost("Create")]
-        public IActionResult Create(CreateEmployeeDto empDto)
+        public async Task<IActionResult> CreateAsync(CreateEmployeeDto empDto,
+            [FromServices] IValidator<CreateEmployeeDto> validator)
         {
+            var validationResult=validator.Validate(empDto);
+
+            if (!validationResult.IsValid)
+            {
+                var modelState = new ModelStateDictionary();
+
+                validationResult.Errors.ForEach(error =>
+                {
+                    modelState.AddModelError(error.PropertyName, error.ErrorMessage);
+                });
+                return ValidationProblem(modelState);
+            }
             var emp=empDto.Adapt<Employee>();
-            context.Employees.Add(emp);
-            context.SaveChanges();
+            await context.Employees.AddAsync(emp);
+            await context.SaveChangesAsync();
 
             return Ok();
         }
         [HttpPut("Update")]
-        public IActionResult Update(int id,CreateEmployeeDto empDto)
+        public async Task<IActionResult> UpdateAsync(int id,CreateEmployeeDto empDto)
         {
-            var Employee = context.Employees.Find(id);
+            var Employee =await context.Employees.FindAsync(id);
             if (Employee == null)
             {
                 return NotFound("Employee Not Found");
             }
             Employee.Name= empDto.Name;
             Employee.Description= empDto.Description;
-            context.SaveChanges();
+            await context.SaveChangesAsync();
             return Ok(Employee);
         }
 
         [HttpDelete("Remove")]
-        public IActionResult Remove(int id)
+        public async Task<IActionResult> RemoveAsync(int id)
         {
-            var Employee = context.Employees.Find(id);
+            var Employee =await context.Employees.FindAsync(id);
             if (Employee == null)
             {
                 return NotFound("Employee Not Found");
             }
             context.Employees.Remove(Employee);
-            context.SaveChanges();
+            await context.SaveChangesAsync();
             return Ok("Employee deleted successfully");
         }
     }

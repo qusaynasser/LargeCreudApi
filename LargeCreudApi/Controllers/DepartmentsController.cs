@@ -1,8 +1,10 @@
 ﻿using LargeCreudApi.Data;
 using LargeCreudApi.DTOs.Department;
 using LargeCreudApi.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LargeCreudApi.Controllers
 {
@@ -18,22 +20,23 @@ namespace LargeCreudApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        public IActionResult Get()
+        [Authorize(AuthenticationSchemes ="Bearer")]
+        public async Task<IActionResult> GetAsync()
         {
-            var Departments = context.Departments.Select(
+            var Departments = await context.Departments.Select(
             show =>new GetDepartmentDto()
             {
                 Id = show.Id,
                 Name = show.Name,
             }
-            );
+            ).ToListAsync();
             return Ok(Departments);
         }
 
         [HttpGet("Detalis")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetByIdAsync(int id)
         {
-            var Department = context.Departments.Find(id);
+            var Department =await context.Departments.FindAsync(id);
             
             if (Department == null)
             {
@@ -48,20 +51,20 @@ namespace LargeCreudApi.Controllers
         }
 
         [HttpPost("Create")]
-        public IActionResult Create(CreateDepartmentDto depDto)
+        public async Task<IActionResult> CreateAsync(CreateDepartmentDto depDto)
         {
             Department department = new Department()
             {
                 Name = depDto.name
             };
-            context.Departments.Add(department);
-            context.SaveChanges();
+            await context.Departments.AddAsync(department);
+           await context.SaveChangesAsync();
             return Ok(department);
         }
         [HttpPut("Update")]
-        public IActionResult Update(int id, CreateDepartmentDto department)
+        public async Task<IActionResult> UpdateAsync(int id, CreateDepartmentDto department)
         {
-            var existingDepartment = context.Departments.Find(id);
+            var existingDepartment =await context.Departments.FindAsync(id);
             if (existingDepartment == null)
             {
                 return NotFound("Department Not Found");
@@ -69,20 +72,20 @@ namespace LargeCreudApi.Controllers
 
             existingDepartment.Name = department.name;
 
-            context.SaveChanges();
+            await context.SaveChangesAsync();
             return Ok(existingDepartment);
         }
 
         [HttpDelete("Remove")]
-        public IActionResult Remove(int id)
+        public async Task<IActionResult> RemoveAsync(int id)
         {
-            var Department = context.Departments.Find(id);
+            var Department =await context.Departments.FindAsync(id);
             if (Department == null)
             {
                 return NotFound("Department Not Found");
             }
             context.Departments.Remove(Department);
-            context.SaveChanges();
+            await context.SaveChangesAsync();
             return Ok("Department deleted successfully");
         }
     }
